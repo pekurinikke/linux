@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>MQTT Chat</title>
+  <style>
+    body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; }
+    #chat-box { border: 1px solid #ccc; padding: 10px; height: 300px; overflow-y: auto; }
+    #msgInput { width: 80%; padding: 8px; }
+    #sendBtn { padding: 8px 12px; }
+    li { margin-bottom: 5px; }
+  </style>
+</head>
+<body>
+  <h1>MQTT Chat</h1>
+
+  <div id="chat-box">
+    <ul id="msgs"></ul>
+  </div>
+
+  <input type="text" id="msgInput" placeholder="Write a message..." />
+  <button id="sendBtn">Send</button>
+
+  <script>
+    const chatBox = document.getElementById("msgs");
+    const input = document.getElementById("msgInput");
+    const sendBtn = document.getElementById("sendBtn");
+
+    async function loadMessages() {
+  try {
+    const res = await fetch("messages"); // ilman alussa /
+    const messages = await res.json();
+    chatBox.innerHTML = messages.map(msg => `<li>${msg}</li>`).join("");
+    chatBox.parentElement.scrollTop = chatBox.parentElement.scrollHeight;
+  } catch (err) {
+    console.error("Failed to load messages:", err);
+  }
+}
+
+async function send() {
+  const text = input.value.trim();
+  if (!text) return;
+  try {
+    await fetch("send", { // ilman alussa /
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text })
+    });
+    input.value = "";
+    loadMessages();
+  } catch (err) {
+    console.error("Failed to send message:", err);
+  }
+}
+
+    sendBtn.addEventListener("click", send);
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });
+
+    loadMessages();
+    setInterval(loadMessages, 1000);
+  </script>
+</body>
+</html>
+

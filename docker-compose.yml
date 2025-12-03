@@ -1,0 +1,43 @@
+version: "3.8"
+
+services:
+  chat:
+    build: .
+    container_name: mqtt-chat-app_chat
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      - DB_HOST=chatdb
+      - DB_USER=chatuser
+      - DB_PASSWORD=chatpass
+      - DB_NAME=chatdb
+    depends_on:
+      - mqtt
+      - chatdb
+
+  mqtt:
+    image: eclipse-mosquitto:2.0
+    container_name: mqtt
+    restart: always
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+
+  chatdb:
+    image: mariadb:11
+    container_name: chatdb
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=rootpass
+      - MYSQL_DATABASE=chatdb
+      - MYSQL_USER=chatuser
+      - MYSQL_PASSWORD=chatpass
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+volumes:
+  db_data:
+
