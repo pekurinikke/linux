@@ -26,32 +26,34 @@
     const input = document.getElementById("msgInput");
     const sendBtn = document.getElementById("sendBtn");
 
+    // Lataa viestit NodePortin /kube/ polusta
     async function loadMessages() {
-  try {
-    const res = await fetch("messages"); // ilman alussa /
-    const messages = await res.json();
-    chatBox.innerHTML = messages.map(msg => `<li>${msg}</li>`).join("");
-    chatBox.parentElement.scrollTop = chatBox.parentElement.scrollHeight;
-  } catch (err) {
-    console.error("Failed to load messages:", err);
-  }
-}
+      try {
+        const res = await fetch("/kube/messages");
+        const messages = await res.json();
+        chatBox.innerHTML = messages.map(msg => `<li>${msg}</li>`).join("");
+        chatBox.scrollTop = chatBox.scrollHeight;
+      } catch (err) {
+        console.error("Failed to load messages:", err);
+      }
+    }
 
-async function send() {
-  const text = input.value.trim();
-  if (!text) return;
-  try {
-    await fetch("send", { // ilman alussa /
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text })
-    });
-    input.value = "";
-    loadMessages();
-  } catch (err) {
-    console.error("Failed to send message:", err);
-  }
-}
+    // Lähetä viesti NodePortin /kube/ polkuun
+    async function send() {
+      const text = input.value.trim();
+      if (!text) return;
+      try {
+        await fetch("/kube/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text })
+        });
+        input.value = "";
+        loadMessages();
+      } catch (err) {
+        console.error("Failed to send message:", err);
+      }
+    }
 
     sendBtn.addEventListener("click", send);
     input.addEventListener("keydown", (e) => { if (e.key === "Enter") send(); });

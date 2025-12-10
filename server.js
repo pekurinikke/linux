@@ -7,18 +7,29 @@ const app = express();
 app.use(bodyParser.json());
 app.use(express.static("public"));
 
-const client = mqtt.connect("mqtt://mqtt:1883");
+// Kubernetes palvelujen DNS-nimet
+const MQTT_HOST = process.env.MQTT_HOST || "mqtt";
+const DB_HOST = process.env.DB_HOST || "chatdb";
+const DB_USER = process.env.DB_USER || "chatuser";
+const DB_PASSWORD = process.env.DB_PASSWORD || "chatpass";
+const DB_NAME = process.env.DB_NAME || "chatdb";
 
+// MQTT client
+const client = mqtt.connect(`mqtt://${MQTT_HOST}:1883`);
+
+// MariaDB pool
 const db = mysql.createPool({
-  host: process.env.DB_HOST || "chatdb",
-  user: process.env.DB_USER || "chatuser",
-  password: process.env.DB_PASSWORD || "chatpass",
-  database: process.env.DB_NAME || "chatdb"
+  host: DB_HOST,
+  user: DB_USER,
+  password: DB_PASSWORD,
+  database: DB_NAME
 });
 
 let messages = [];
 
+// MQTT subscribe
 client.on("connect", () => {
+  console.log("MQTT connected");
   client.subscribe("chat", () => console.log("Subscribed to chat topic"));
 });
 
@@ -32,11 +43,14 @@ client.on("message", (topic, message) => {
   });
 });
 
+// API endpoints
 app.get("/messages", (req, res) => {
   db.query("SELECT text FROM messages ORDER BY id DESC LIMIT 10", (err, results) => {
-    if (err) return res.status(500).send(err);
-    const msgs = results.map(r => r.text).reverse();
-    res.json(msgs);
+    if (err) {
+      console.error(err);
+      return res.status(500).send("DB error");
+    }
+    res.json(results.map(r => r.text).reverse());
   });
 });
 
@@ -44,23 +58,10 @@ app.post("/send", (req, res) => {
   const text = req.body.text;
   if (!text) return res.status(400).send("No message");
 
-  // Lähetetään MQTT:lle
   client.publish("chat", text);
-
-  // Tallenna myös suoraan tietokantaan
-  db.query("INSERT INTO messages (text) VALUES (?)", [text], (err) => {
-    if (err) {
-      console.error("DB insert error:", err);
-      return res.status(500).send("Database error");
-    }
-    // Lisää muistiin chat-listaan
-    messages.push(text);
-    if (messages.length > 10) messages.shift();
-    res.sendStatus(200);
-  });
+  res.sendStatus(200);
 });
 
-
+// Start server
 const PORT = 3000;
-app.listen(PORT, () => console.log(`Chat service running on port ${PORT}`));
-
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

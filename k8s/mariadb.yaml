@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chatdb
+spec:
+  selector:
+    matchLabels:
+      app: chatdb
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: chatdb
+    spec:
+      containers:
+        - name: mariadb
+          image: mariadb:11
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              value: rootpass
+            - name: MYSQL_DATABASE
+              value: chatdb
+            - name: MYSQL_USER
+              value: chatuser
+            - name: MYSQL_PASSWORD
+              value: chatpass
+          ports:
+            - containerPort: 3306
+          volumeMounts:
+            - name: db-storage
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: db-storage
+          emptyDir: {}
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chatdb
+spec:
+  selector:
+    app: chatdb
+  ports:
+    - port: 3306
+      targetPort: 3306
